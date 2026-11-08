@@ -1,0 +1,5 @@
+[application]
+config/name="blank"
+run/main_scene="res://b.tscn"
+[rendering]
+renderer/rendering_method="gl_compatibility"

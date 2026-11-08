@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avatar EPTX</title>
+<style>
+  :root {
+    --bg: #e9eef1; --panel: #ffffff; --ink: #20262b; --muted: #5d6870; --line: #cfd8de;
+    --green: #5aa612; --green-dark: #3e7a08; --bad: #b3261e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15191c; --panel: #20262b; --ink: #e8ecef; --muted: #9aa6ae; --line: #343d44; --bad: #f2b8b5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header { padding: 14px 20px; background: linear-gradient(#8fd02c, #4f9a0c); color: #fff; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; padding: 16px; height: calc(100vh - 54px); }
+  .sona { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; min-height: 420px; display: flex; flex-direction: column; }
+  .sona iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+  .sona p { margin: 0; padding: 8px 12px; background: var(--panel); color: var(--muted); font-size: 13px; }
+  aside { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow: auto; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  ol { padding-left: 20px; margin: 0 0 16px; color: var(--muted); }
+  label { display: block; font-size: 13px; color: var(--muted); margin-top: 10px; }
+  input[type=text], input[type=password] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+  button { margin-top: 12px; width: 100%; padding: 10px; border: 0; border-radius: 6px; background: linear-gradient(#7cc322, var(--green-dark)); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .drop { margin-top: 14px; border: 2px dashed var(--line); border-radius: 10px; padding: 18px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over { border-color: var(--green); }
+  .preview { display: flex; justify-content: center; margin-top: 12px; }
+  .preview img { max-width: 100%; max-height: 260px; border-radius: 8px; background: repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 16px 16px; }
+  .msg { margin-top: 10px; font-size: 13px; min-height: 1.4em; }
+  .msg.bad { color: var(--bad); }
+  .hidden { display: none; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; height: auto; } .sona { height: 70vh; } }
+</style>
+</head>
+<body>
+<header><h1>Avatar da conta EPTX</h1></header>
+<main>
+  <section class="sona">
+    <iframe src="https://360sona.com/" title="360sona" allow="clipboard-write"></iframe>
+    <p>O 360sona e um site de terceiros, aberto aqui dentro. Se ele nao carregar, <a href="https://360sona.com/" target="_blank" rel="noopener">abra em outra aba</a>.</p>
+  </section>
+  <aside>
+    <h2>Como fazer</h2>
+    <ol>
+      <li>Monte o avatar no 360sona, ao lado.</li>
+      <li>Na foto, use <b>Save as GIF</b> e guarde o arquivo.</li>
+      <li>Entre com a conta EPTX e mande o GIF aqui.</li>
+    </ol>
+    <form id="login">
+      <label for="gt">Gamertag</label>
+      <input id="gt" type="text" autocomplete="username" required>
+      <label for="pw">Senha</label>
+      <input id="pw" type="password" autocomplete="current-password" required>
+      <button type="submit">Entrar</button>
+    </form>
+    <div id="upload" class="hidden">
+      <p>Conta: <b id="who"></b></p>
+      <div id="drop" class="drop">Arraste o GIF (ou PNG) aqui, ou clique para escolher.</div>
+      <input id="file" type="file" accept="image/gif,image/png" class="hidden">
+      <div class="preview"><img id="img" alt="" class="hidden"></div>
+      <button id="send" disabled>Salvar na conta</button>
+    </div>
+    <div id="msg" class="msg"></div>
+  </aside>
+</main>
+<script>
+// SHA-256 e HMAC em JavaScript puro: o crypto.subtle do navegador so existe em
+// HTTPS ou localhost, e este servidor costuma ser aberto pelo IP da rede.
+const K = new Uint32Array([
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,
+  0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,
+  0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,
+  0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+function sha256(bytes) {
+  const len = bytes.length, total = ((len + 9 + 63) >> 6) << 6;
+  const m = new Uint8Array(total);
+  m.set(bytes);
+  m[len] = 0x80;
+  const bits = len * 8;
+  const dv = new DataView(m.buffer);
+  dv.setUint32(total - 8, Math.floor(bits / 0x100000000));
+  dv.setUint32(total - 4, bits >>> 0);
+  const h = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+  const w = new Uint32Array(64);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < total; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(w[i-15], 7) ^ rotr(w[i-15], 18) ^ (w[i-15] >>> 3);
+      const s1 = rotr(w[i-2], 17) ^ rotr(w[i-2], 19) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0;
+    }
+    let [a, b, c, d, e, f, g, hh] = h;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (hh + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) >>> 0;
+      const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+      hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    h[0] += a; h[1] += b; h[2] += c; h[3] += d; h[4] += e; h[5] += f; h[6] += g; h[7] += hh;
+  }
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 8; i++) new DataView(out.buffer).setUint32(i * 4, h[i]);
+  return out;
+}
+const hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+const fromHex = (s) => new Uint8Array(s.match(/../g).map((x) => parseInt(x, 16)));
+const utf8 = (s) => new TextEncoder().encode(s);
+function hmac(key, data) {
+  if (key.length > 64) key = sha256(key);
+  const k = new Uint8Array(64); k.set(key);
+  const inner = new Uint8Array(64 + data.length), outer = new Uint8Array(96);
+  for (let i = 0; i < 64; i++) { inner[i] = k[i] ^ 0x36; outer[i] = k[i] ^ 0x5c; }
+  inner.set(data, 64);
+  outer.set(sha256(inner), 64);
+  return sha256(outer);
+}
+
+let session = null, clockOffset = 0, chosen = null, chosenType = '';
+const $ = (id) => document.getElementById(id);
+function say(text, bad) { $('msg').textContent = text; $('msg').className = 'msg' + (bad ? ' bad' : ''); }
+
+// Mesma assinatura do console: METODO \n CAMINHO \n TIMESTAMP \n NONCE \n sha256(corpo).
+function signedHeaders(method, path, body) {
+  const ts = String(Math.floor(Date.now() / 1000) + clockOffset);
+  const nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
+  const canonical = [method, path, ts, nonce, hex(sha256(body))].join('\n');
+  return {
+    'X-EPTX-Session': session.token,
+    'X-EPTX-Timestamp': ts,
+    'X-EPTX-Nonce': nonce,
+    'X-EPTX-Signature': hex(hmac(fromHex(session.secret), utf8(canonical))),
+  };
+}
+
+$('login').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  say('Entrando...');
+  try {
+    const time = await (await fetch('/api/v1/time')).json();
+    clockOffset = time.serverTime - Math.floor(Date.now() / 1000);
+    const res = await fetch('/api/v1/auth/login', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ gamertag: $('gt').value, password: $('pw').value, hwId: 'WEB-AVATAR', label: 'Pagina do avatar' }),
+    });
+    if (!res.ok) throw new Error(res.status === 401 ? 'Gamertag ou senha errada.' : 'O servidor recusou (' + res.status + ').');
+    session = await res.json();
+    $('pw').value = '';
+    $('who').textContent = session.gamertag;
+    $('login').classList.add('hidden');
+    $('upload').classList.remove('hidden');
+    say('');
+  } catch (err) { say(err.message, true); }
+});
+
+async function choose(file) {
+  if (!file) return;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const magic = String.fromCharCode(...bytes.slice(0, 4));
+  chosenType = magic.startsWith('GIF') ? 'image/gif' : magic === '\x89PNG' ? 'image/png' : '';
+  if (!chosenType) { say('Esse arquivo nao e GIF nem PNG.', true); return; }
+  chosen = bytes;
+  $('img').src = URL.createObjectURL(file);
+  $('img').classList.remove('hidden');
+  $('send').disabled = false;
+  say(file.name + ' - ' + Math.round(bytes.length / 1024) + ' KB');
+}
+$('drop').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', () => choose($('file').files[0]));
+$('drop').addEventListener('dragover', (ev) => { ev.preventDefault(); $('drop').classList.add('over'); });
+$('drop').addEventListener('dragleave', () => $('drop').classList.remove('over'));
+$('drop').addEventListener('drop', (ev) => { ev.preventDefault(); $('drop').classList.remove('over'); choose(ev.dataTransfer.files[0]); });
+
+$('send').addEventListener('click', async () => {
+  $('send').disabled = true;
+  say('Enviando...');
+  try {
+    const path = '/api/v1/me/avatar';
+    const res = await fetch(path, {
+      method: 'PUT', headers: { 'content-type': chosenType, ...signedHeaders('PUT', path, chosen) }, body: chosen,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const why = { avatar_grande_demais: 'arquivo grande demais', dimensoes_invalidas: 'imagem grande demais (maximo 1024x1024 no GIF)',
+        quadros_demais: 'GIF com quadros demais', nao_e_gif: 'GIF quebrado', nao_e_png: 'PNG quebrado' }[data.error] || data.error || res.status;
+      throw new Error('O servidor recusou: ' + why + '.');
+    }
+    say('Salvo! No console, aperte Y na dash para atualizar.');
+  } catch (err) { say(err.message, true); }
+  $('send').disabled = false;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+{"sheet":"teams","columns":["id","name","agent_asset","spawn_class","color","default_pistol","bot_names"],
+"rows":[
+{"id":"CT","name":"Counter-Terrorists","agent_asset":"mdl_ct","spawn_class":"info_player_counterterrorist","color":"#5d79ae","default_pistol":"usp","bot_names":["Shane","Vitaliy","Karl","Ethan","Brian"]},
+{"id":"T","name":"Terrorists","agent_asset":"mdl_t","spawn_class":"info_player_terrorist","color":"#de9b35","default_pistol":"glock","bot_names":["Rock","Ivan","Marcus","Yuri","Dmitri"]}
+]}

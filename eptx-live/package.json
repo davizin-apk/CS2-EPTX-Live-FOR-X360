@@ -1,0 +1,34 @@
+{
+  "name": "eptx-live",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Servico online self-hosted para Xbox 360 RGH: contas, catalogo, downloads, amigos e chat.",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/index.ts",
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "scan": "node --env-file-if-exists=.env src/tools/scan.ts",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node src/tools/smoke.ts",
+    "send": "node --env-file-if-exists=.env src/tools/send.ts",
+    "selftest:core": "node client/core/selftest.mjs",
+    "vectors": "node client/core/vectors.mjs",
+    "client:build": "node client/build.mjs",
+    "client:ppc": "node client/build.mjs --ppc",
+    "stfs": "node --env-file-if-exists=.env src/tools/stfs-verify.ts",
+    "stfs:roundtrip": "node --env-file-if-exists=.env src/tools/stfs-roundtrip.ts",
+    "stfs:pack": "node --env-file-if-exists=.env src/tools/stfs-pack.ts",
+    "client:xbla": "node client/xbox/pack.mjs",
+    "avatar": "node --env-file-if-exists=.env src/tools/avatar.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,124 @@
+{
+ "sheet": "systems",
+ "columns": [
+  "id",
+  "script",
+  "purpose",
+  "reads_sheets",
+  "test_check"
+ ],
+ "rows": [
+  {
+   "id": "prep",
+   "script": "scripts/prep.gd",
+   "purpose": "Find the CS2 folder (from --cs2 launch arg), export every assets row with the bundled Source2Viewer-CLI into the cache, show progress",
+   "reads_sheets": "assets",
+   "test_check": "prep-done"
+  },
+  {
+   "id": "assets",
+   "script": "scripts/game.gd",
+   "purpose": "Load cached glb/wav/svg/ttf at runtime and hand them out by asset id",
+   "reads_sheets": "assets",
+   "test_check": "assets-loaded"
+  },
+  {
+   "id": "menu",
+   "script": "scripts/menu.gd",
+   "purpose": "Main menu: agent on a Dust II backdrop, PLAY panel with mode tiles, map tile, side, difficulty, settings",
+   "reads_sheets": "modes,maps,bot_skills,teams",
+   "test_check": "menu-shown"
+  },
+  {
+   "id": "world",
+   "script": "scripts/world.gd",
+   "purpose": "Load map render mesh + world collision, parse spawns, bomb sites, bake bot navmesh (cached)",
+   "reads_sheets": "maps,teams",
+   "test_check": "map-loaded"
+  },
+  {
+   "id": "match",
+   "script": "scripts/match.gd",
+   "purpose": "Rounds, freeze/buy time, bomb plant/defuse/explode, economy, score, side win",
+   "reads_sheets": "modes,weapons,equipment,teams",
+   "test_check": "round-played"
+  },
+  {
+   "id": "fighter",
+   "script": "scripts/fighter.gd",
+   "purpose": "Shared body for player and bots: health, armor, weapons, shooting, hitboxes, agent model + animation",
+   "reads_sheets": "weapons,teams",
+   "test_check": "shot-fired"
+  },
+  {
+   "id": "player",
+   "script": "scripts/player.gd",
+   "purpose": "First-person control with Source-style movement, weapon slots, buy menu, plant/defuse, building input",
+   "reads_sheets": "weapons,build_pieces",
+   "test_check": "player-spawned"
+  },
+  {
+   "id": "viewmodel",
+   "script": "scripts/viewmodel.gd",
+   "purpose": "First-person arms and gun: CS2's viewmodel clips (draw/idle/shoot/reload per weapon set) with the agent's firstperson arms re-skinned onto the viewmodel skeleton",
+   "reads_sheets": "weapons,teams,assets",
+   "test_check": "menu-shown"
+  },
+  {
+   "id": "graphics",
+   "script": "scripts/game.gd",
+   "purpose": "Graphics presets Low/Medium/High and render scale, applied live to the viewport, sun shadows and environment",
+   "reads_sheets": "graphics",
+   "test_check": "map-loaded"
+  },
+  {
+   "id": "bot",
+   "script": "scripts/bot.gd",
+   "purpose": "Bot brain: buy, route to sites on navmesh, see/aim/shoot, plant, defuse, build cover",
+   "reads_sheets": "bot_skills,weapons,build_pieces",
+   "test_check": "bot-kill"
+  },
+  {
+   "id": "build",
+   "script": "scripts/build.gd",
+   "purpose": "Fortnite-style building: 5.12 m grid, wall/floor/stairs/cone, wood/brick/metal, turbo build, edit grid (3x3 walls, 2x2 others), pieces collapse without support",
+   "reads_sheets": "build_pieces,build_materials,modes",
+   "test_check": "piece-built"
+  },
+  {
+   "id": "hud",
+   "script": "scripts/hud.gd",
+   "purpose": "Health/armor, money, ammo, round timer with team scores and alive counts, kill feed, crosshair, buy menu, build bar, scoreboard",
+   "reads_sheets": "weapons,equipment,build_pieces",
+   "test_check": "hud-shown"
+  },
+  {
+   "id": "portal",
+   "script": "scripts/portal.gd",
+   "purpose": "Portal Gun: blue portal on the surface you shoot, orange from the tactical map; fighters, bot paths and bullets pass through; see-through views on Medium/High",
+   "reads_sheets": "weapons,modes,graphics",
+   "test_check": "portal-used"
+  },
+  {
+   "id": "tacmap",
+   "script": "scripts/tacmap.gd",
+   "purpose": "Right mouse with the Portal Gun: radar of Dust II drawn from the navmesh, predicted enemy routes and recommended exits for the second portal",
+   "reads_sheets": "modes",
+   "test_check": "portal-used"
+  },
+  {
+   "id": "testmode",
+   "script": "scripts/testmode.gd",
+   "purpose": "Melty test mode: when %LOCALAPPDATA%/Melty/test/bot-strike-dust-ii.json exists, report checks, auto-start a Classic 1.6 match with the player seat driven by the bot brain, keep playing rounds, never quit; watchdog logs and fails checks that never happen",
+   "reads_sheets": "systems",
+   "test_check": "test-done"
+  },
+  {
+   "id": "classic16",
+   "script": "scripts/player.gd",
+   "purpose": "Classic 1.6 ruleset: GoldSrc movement (bhop cap, jump stamina, jump on press), 1.6 weapon values and view-punch recoil, amber HUD",
+   "reads_sheets": "rulesets,weapons16,modes",
+   "test_check": "recoil-1-6"
+  }
+ ]
+}

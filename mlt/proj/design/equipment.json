@@ -1,0 +1,6 @@
+{"sheet":"equipment","columns":["id","name","price","team","effect","icon_asset"],
+"rows":[
+{"id":"kevlar","name":"Kevlar Vest","price":650,"team":"any","effect":"armor100","icon_asset":"img_armor"},
+{"id":"kevlar_helmet","name":"Kevlar + Helmet","price":1000,"team":"any","effect":"armor100_helmet","icon_asset":"img_armor_helmet"},
+{"id":"defuser","name":"Defuse Kit","price":400,"team":"CT","effect":"defuse5","icon_asset":"img_defuser"}
+]}

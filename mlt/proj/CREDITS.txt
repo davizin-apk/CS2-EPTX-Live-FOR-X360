@@ -1,0 +1,24 @@
+Bot Strike: Dust II
+===================
+
+A 5v5 bots game that plays from your own copy of Counter-Strike 2.
+Dust II, the agents, the guns, their sounds, the HUD icons, the menu music and the fonts are read
+from your Counter-Strike 2 install on first launch and cached on your PC. None of Counter-Strike 2's
+files are included in this download.
+
+Counter-Strike 2, Dust II and all of its content are (c) Valve Corporation. Bot Strike is a fan-made
+mod and is not affiliated with or endorsed by Valve.
+
+Bundled software
+----------------
+- Godot Engine 4.7.2 (runs the game) - MIT License, (c) Godot Engine contributors, Juan Linietsky,
+  Ariel Manzur. https://godotengine.org/license
+- Source 2 Viewer CLI 20.1 / ValveResourceFormat (reads CS2's files) - MIT License,
+  (c) ValveResourceFormat contributors. https://github.com/ValveResourceFormat/ValveResourceFormat
+  It also ships SkiaSharp (MIT, (c) Microsoft) and SPIRV-Cross (Apache-2.0, (c) Khronos Group / ARM).
+
+Controls
+--------
+WASD move, SPACE jump, CTRL crouch, SHIFT walk, mouse aim/shoot, right mouse AWP scope,
+1/2/3 weapons, 5 bomb, G drop bomb, R reload, B buy menu, E defuse, TAB scores, ESC pause.
+Build Fight mode: Q wall, X floor, C ramp, left mouse to place, 1/2/3 back to your guns.

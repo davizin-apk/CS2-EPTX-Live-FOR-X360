@@ -1,0 +1,10 @@
+# Copie para eptx.ini e envie por FTP para Hdd1:\EPTX\eptx.ini.
+# host precisa ser IP: o console nao resolve nomes.
+host=192.168.0.10
+port=8360
+
+# O login e feito na propria dash (bloco do perfil, com o teclado do console), e a
+# sessao fica salva em Hdd1:\EPTX\session.ini. user e pass aqui sao opcionais:
+# servem so para entrar sozinho sem digitar.
+#user=Rodrigo
+#pass=troque-isto

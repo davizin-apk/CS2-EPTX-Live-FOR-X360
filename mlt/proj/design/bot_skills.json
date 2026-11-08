@@ -1,0 +1,6 @@
+{"sheet":"bot_skills","columns":["id","name","reaction_s","aim_error_deg","aim_settle_s","fov_deg","see_range_m","build_chance"],
+"rows":[
+{"id":"easy","name":"Easy","reaction_s":0.7,"aim_error_deg":6.0,"aim_settle_s":1.2,"fov_deg":100,"see_range_m":40,"build_chance":0.25},
+{"id":"normal","name":"Normal","reaction_s":0.4,"aim_error_deg":3.5,"aim_settle_s":0.8,"fov_deg":120,"see_range_m":60,"build_chance":0.5},
+{"id":"hard","name":"Hard","reaction_s":0.22,"aim_error_deg":2.0,"aim_settle_s":0.45,"fov_deg":140,"see_range_m":80,"build_chance":0.75}
+]}

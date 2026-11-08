@@ -1,0 +1,6 @@
+; Projeto minimo so para rodar o export_map.gd sem mexer no projeto do jogo.
+config_version=5
+
+[application]
+
+config/name="BotStrike 360 converter"

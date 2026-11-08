@@ -1,0 +1,35 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+config/name="Bot Strike"
+config/description="5v5 vs bots on Dust II, built from your own Counter-Strike 2 install"
+run/main_scene="res://scenes/boot.tscn"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="BotStrike"
+config/features=PackedStringArray("4.7")
+
+[autoload]
+Game="*res://scripts/game.gd"
+
+[display]
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/mode=3
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=1
+
+[physics]
+common/physics_ticks_per_second=64
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+occlusion_culling/use_occlusion_culling=true
+anti_aliasing/quality/msaa_3d=1
+textures/canvas_textures/default_texture_filter=1
+environment/defaults/default_clear_color=Color(0.05,0.06,0.08,1)
+
+[debug]
+gdscript/warnings/inference_on_variant=0
+gdscript/warnings/untyped_declaration=0

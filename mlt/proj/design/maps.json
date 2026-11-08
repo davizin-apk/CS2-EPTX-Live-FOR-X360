@@ -1,0 +1,49 @@
+{
+ "sheet": "maps",
+ "columns": [
+  "id",
+  "name",
+  "map_asset",
+  "phys_asset",
+  "trig_asset",
+  "ents_asset",
+  "site_a_min",
+  "site_a_max",
+  "site_b_min",
+  "site_b_max",
+  "units_to_m",
+  "preview_asset"
+ ],
+ "rows": [
+  {
+   "id": "de_dust2",
+   "name": "Dust II",
+   "map_asset": "map_dust2",
+   "phys_asset": "phys_dust2",
+   "ents_asset": "ents_dust2",
+   "site_a_min": [
+    976,
+    2336,
+    96
+   ],
+   "site_a_max": [
+    1248,
+    2624,
+    192
+   ],
+   "site_b_min": [
+    -1728,
+    2496,
+    0
+   ],
+   "site_b_max": [
+    -1344,
+    2864,
+    96
+   ],
+   "units_to_m": 0.0254,
+   "preview_asset": "none",
+   "trig_asset": "trig_dust2"
+  }
+ ]
+}

@@ -1,0 +1,49 @@
+{
+ "sheet": "build_materials",
+ "columns": [
+  "id",
+  "name",
+  "hp_mult",
+  "time_mult",
+  "start_hp",
+  "color",
+  "start_amount",
+  "per_kill",
+  "texture_hint"
+ ],
+ "rows": [
+  {
+   "id": "wood",
+   "name": "Wood",
+   "hp_mult": 1.0,
+   "time_mult": 1.0,
+   "start_hp": 0.1,
+   "color": "b8854f",
+   "start_amount": 300,
+   "per_kill": 50,
+   "texture_hint": "wood_planks"
+  },
+  {
+   "id": "brick",
+   "name": "Brick",
+   "hp_mult": 2.0,
+   "time_mult": 2.5,
+   "start_hp": 0.1,
+   "color": "a5523f",
+   "start_amount": 150,
+   "per_kill": 30,
+   "texture_hint": "brick_ground"
+  },
+  {
+   "id": "metal",
+   "name": "Metal",
+   "hp_mult": 3.333,
+   "time_mult": 4.5,
+   "start_hp": 0.1,
+   "color": "8f9aa3",
+   "start_amount": 100,
+   "per_kill": 20,
+   "texture_hint": "metal_panels_01_color"
+  }
+ ]
+}

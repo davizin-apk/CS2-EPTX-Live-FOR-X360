@@ -1,0 +1,60 @@
+{
+ "sheet": "build_pieces",
+ "columns": [
+  "id",
+  "name",
+  "key",
+  "alt_key",
+  "cost",
+  "max_hp",
+  "build_time",
+  "shape",
+  "edit_grid"
+ ],
+ "rows": [
+  {
+   "id": "wall",
+   "name": "Wall",
+   "key": "Q",
+   "alt_key": "F1",
+   "cost": 10,
+   "max_hp": 150,
+   "build_time": 1.0,
+   "shape": "wall",
+   "edit_grid": 3
+  },
+  {
+   "id": "floor",
+   "name": "Floor",
+   "key": "X",
+   "alt_key": "F2",
+   "cost": 10,
+   "max_hp": 140,
+   "build_time": 1.0,
+   "shape": "floor",
+   "edit_grid": 2
+  },
+  {
+   "id": "ramp",
+   "name": "Stairs",
+   "key": "C",
+   "alt_key": "F3",
+   "cost": 10,
+   "max_hp": 140,
+   "build_time": 1.0,
+   "shape": "ramp",
+   "edit_grid": 2
+  },
+  {
+   "id": "cone",
+   "name": "Cone",
+   "key": "V",
+   "alt_key": "F4",
+   "cost": 10,
+   "max_hp": 140,
+   "build_time": 1.0,
+   "shape": "cone",
+   "edit_grid": 2
+  }
+ ]
+}

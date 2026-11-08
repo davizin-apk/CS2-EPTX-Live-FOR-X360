@@ -1,0 +1,595 @@
+// Bot Strike 360, etapa 1: o Dust II do pacote no console, em primeira pessoa, andando com o controle.
+//
+// Seguranca, porque isto roda num console de verdade:
+// - So le arquivos. O unico que ele escreve e o proprio log, ao lado do .xex (o xsdk faz isso).
+// - O pacote passa pelas conferencias do pack.c antes de qualquer byte ir para a GPU: um indice fora do lugar ou um
+//   tamanho errado vira uma mensagem na tela, nunca um draw.
+// - Antes de copiar para a GPU ele soma a memoria que vai usar e recusa se passar de GPU_BUDGET_BYTES.
+// - Quadros presos ao vblank (60 Hz), como os samples do xsdk: nada roda solto esquentando o console.
+// - Se a GPU parar de responder, xsdk_present_begin desiste em BEGIN_TIMEOUT_MS e o jogo volta para a dash.
+// - Back sai e devolve tudo (GPU, tela, memoria) como os samples do xsdk fazem.
+
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include "botstrike_shaders.h"
+#include "collide.h"
+#include "mathx.h"
+#include "pack.h"
+#include "player.h"
+#include "xsdk/gpu.h"
+#include "xsdk/kernel.h"
+#include "xsdk/log.h"
+#include "xsdk/present.h"
+#include "xsdk/shader.h"
+#include "xsdk/splash.h"
+#include "xsdk/text.h"
+#include "xsdk/texture.h"
+
+enum {
+	BUFFERS = 2,
+	SWAP_INTERVAL = 1,
+	BEGIN_TIMEOUT_MS = 5000,
+	ARENA_BLOCK_BYTES = 16 * 1024 * 1024,
+	ARENA_MAX_BLOCKS = 64,
+	TEXTURE_ALIGN = 4096,
+	MAX_TEXTURES = 4096,
+	STICK_DEAD_ZONE = 7849, // a zona morta que a Microsoft recomenda para o analogico esquerdo
+	TRIGGER_THRESHOLD = 64,
+};
+
+static const uint32_t GPU_BUDGET_BYTES = 180u * 1024 * 1024;
+static const uint32_t TEXT_ARGB = 0xFFFFFFFF; // uma cor so de texto por quadro (xsdk:TODO.md, milestone 64)
+static const float FOV_Y = 1.2f;
+static const float NEAR_Z = 0.05f;
+static const float LOD_DISTANCE = 28.0f;
+static const float LOOK_SPEED = 3.0f; // radianos por segundo com o analogico no fim
+
+// Onde o pacote pode estar: ao lado do .xex solto, ou na pasta do jogo no HD (quando o .xex vem dentro de um
+// container XBLA, game: e o container, so de leitura).
+static const char *const PACK_PATHS[] = { "game:/dust2.pak", "hdd:/BotStrike/dust2.pak", "usb:/BotStrike/dust2.pak" };
+
+static const XsdkVertexElement layout[] = {
+	{ .usage = XSDK_USAGE_POSITION, .format = XSDK_VERTEX_FLOAT3, .offset_bytes = 0 },
+	{ .usage = XSDK_USAGE_TEXCOORD, .format = XSDK_VERTEX_FLOAT3, .offset_bytes = 12 },
+};
+
+// ---------------------------------------------------------------- memoria da GPU em poucos blocos grandes
+
+typedef struct {
+	volatile uint32_t *block[ARENA_MAX_BLOCKS];
+	uint32_t block_bytes[ARENA_MAX_BLOCKS];
+	uint32_t used_bytes[ARENA_MAX_BLOCKS];
+	uint32_t count;
+	uint32_t total_bytes;
+} Arena;
+
+// Um pedaco alinhado de memoria da GPU; abre outro bloco quando o atual nao tem espaco.
+static volatile uint8_t *arena_alloc(Arena *a, uint32_t bytes, uint32_t align)
+{
+	if (a->count) {
+		const uint32_t i = a->count - 1;
+		const uint32_t at = (a->used_bytes[i] + align - 1) / align * align;
+		if (at + bytes <= a->block_bytes[i]) {
+			a->used_bytes[i] = at + bytes;
+			return (volatile uint8_t *)a->block[i] + at;
+		}
+	}
+	if (a->count == ARENA_MAX_BLOCKS)
+		return NULL;
+	const uint32_t size = bytes > ARENA_BLOCK_BYTES ? (bytes + 0xFFFF) & ~0xFFFFu : ARENA_BLOCK_BYTES;
+	volatile uint32_t *m = xsdk_gpu_alloc(size);
+	if (!m)
+		return NULL;
+	a->block[a->count] = m;
+	a->block_bytes[a->count] = size;
+	a->used_bytes[a->count] = bytes;
+	a->count++;
+	a->total_bytes += size;
+	return (volatile uint8_t *)m;
+}
+
+static void arena_invalidate(const Arena *a)
+{
+	for (uint32_t i = 0; i < a->count; i++)
+		xsdk_gpu_invalidate(xsdk_gpu_address(a->block[i]), a->used_bytes[i]);
+}
+
+static void arena_free(Arena *a)
+{
+	for (uint32_t i = 0; i < a->count; i++)
+		xsdk_gpu_free(a->block[i]);
+	memset(a, 0, sizeof *a);
+}
+
+// ---------------------------------------------------------------- o mapa na GPU
+
+typedef struct {
+	uint32_t vertex_address, vertex_bytes;
+	uint32_t index_address;
+} GpuDraw;
+
+typedef struct {
+	BsPack pack;
+	BsCollider collider;
+	Arena arena;
+	GpuDraw *draws;
+	XsdkTexture *textures;
+	XsdkTexture white;
+	bool white_ok;
+	XsdkSamplerState sampler;
+	XsdkShader vertex, pixel, pixel_alpha;
+	bool vertex_ok, pixel_ok, pixel_alpha_ok;
+	XsdkDepthStencilState depth;
+	char error[320];
+} Map;
+
+static bool map_error(Map *m, const char *text)
+{
+	snprintf(m->error, sizeof m->error, "%s", text);
+	xsdk_log_write("botstrike: %s", text);
+	return false;
+}
+
+static bool open_pack(Map *m)
+{
+	char last[320] = "nao achei o dust2.pak";
+	for (size_t i = 0; i < sizeof PACK_PATHS / sizeof PACK_PATHS[0]; i++) {
+		char err[256];
+		FILE *probe = fopen(PACK_PATHS[i], "rb");
+		if (!probe)
+			continue;
+		fclose(probe);
+		if (bs_pack_load(&m->pack, PACK_PATHS[i], err, sizeof err)) {
+			xsdk_log_write("botstrike: pacote %s: %u draws, %u vertices, %u texturas, %u triangulos de colisao",
+				PACK_PATHS[i], (unsigned)m->pack.draw_count, (unsigned)m->pack.vertex_count,
+				(unsigned)m->pack.texture_count, (unsigned)m->pack.triangle_count);
+			return true;
+		}
+		snprintf(last, sizeof last, "%s: %s", PACK_PATHS[i], err);
+	}
+	return map_error(m, last);
+}
+
+static uint32_t xsdk_format(uint32_t pack_format)
+{
+	return pack_format == BS_TEXTURE_DXT1 ? XSDK_FORMAT_DXT1 : XSDK_FORMAT_DXT5;
+}
+
+static bool upload_map(Map *m)
+{
+	BsPack *p = &m->pack;
+	if (p->texture_count > MAX_TEXTURES)
+		return map_error(m, "texturas demais no pacote");
+	m->textures = calloc(p->texture_count ? p->texture_count : 1, sizeof *m->textures);
+	m->draws = calloc(p->draw_count, sizeof *m->draws);
+	if (!m->textures || !m->draws)
+		return map_error(m, "sem memoria para a lista de draws");
+
+	// Quanto vai para a GPU, antes de pedir qualquer coisa.
+	uint64_t need = (uint64_t)p->vertex_count * BS_VERTEX_BYTES + (uint64_t)p->index_count * 2;
+	uint32_t biggest = 0;
+	for (uint32_t i = 0; i < p->texture_count; i++) {
+		const BsTextureInfo *t = &p->textures[i];
+		if (!NT_SUCCESS(xsdk_texture_init(&m->textures[i], xsdk_format(t->format), t->width, t->height, t->levels, true)))
+			return map_error(m, "o xsdk recusou o formato de uma textura");
+		need += m->textures[i].size_bytes + TEXTURE_ALIGN;
+		if (t->data_bytes > biggest)
+			biggest = t->data_bytes;
+	}
+	xsdk_log_write("botstrike: %.1f MB para a GPU", need / 1048576.0);
+	if (need > GPU_BUDGET_BYTES) {
+		char text[128];
+		snprintf(text, sizeof text, "o mapa pede %u MB de GPU; o limite e %u MB", (unsigned)(need >> 20),
+			(unsigned)(GPU_BUDGET_BYTES >> 20));
+		return map_error(m, text);
+	}
+
+	// Vertices e indices, draw a draw, cada um inteiro dentro de um bloco.
+	for (uint32_t i = 0; i < p->draw_count; i++) {
+		const BsDraw *d = &p->draws[i];
+		const uint32_t vbytes = d->vertex_count * BS_VERTEX_BYTES;
+		const uint32_t ibytes = d->index_count * 2;
+		volatile uint8_t *v = arena_alloc(&m->arena, vbytes, 16);
+		volatile uint8_t *ix = arena_alloc(&m->arena, ibytes, 16);
+		if (!v || !ix)
+			return map_error(m, "a GPU ficou sem memoria para o mapa");
+		// O memcpy do xsdk usa so os stores que a memoria write-combined aceita (xsdk:docs/PITFALLS.md).
+		memcpy((void *)v, p->vertices + (size_t)d->first_vertex * 6, vbytes);
+		memcpy((void *)ix, p->indices + d->first_index, ibytes);
+		m->draws[i] = (GpuDraw){ xsdk_gpu_address((volatile uint32_t *)v), vbytes,
+			xsdk_gpu_address((volatile uint32_t *)ix) };
+	}
+	bs_pack_release_geometry(p);
+
+	// Texturas, nivel a nivel, de um buffer na memoria comum.
+	uint8_t *staging = malloc(biggest ? biggest : 16);
+	if (!staging)
+		return map_error(m, "sem memoria para ler as texturas");
+	for (uint32_t i = 0; i < p->texture_count; i++) {
+		const BsTextureInfo *t = &p->textures[i];
+		XsdkTexture *tex = &m->textures[i];
+		volatile uint8_t *mem = arena_alloc(&m->arena, tex->size_bytes, TEXTURE_ALIGN);
+		if (!mem) {
+			free(staging);
+			return map_error(m, "a GPU ficou sem memoria para as texturas");
+		}
+		xsdk_texture_attach(tex, (volatile uint32_t *)mem);
+		if (!bs_pack_read_texture(p, t, staging)) {
+			free(staging);
+			return map_error(m, "nao consegui ler uma textura do pacote");
+		}
+		uint32_t at = 0;
+		for (uint32_t l = 0; l < t->levels; l++) {
+			uint32_t w = t->width >> l;
+			w = w ? w : 1;
+			const uint32_t row = ((w + 3) / 4) * (t->format == BS_TEXTURE_DXT1 ? 8 : 16);
+			xsdk_texture_upload(tex, l, staging + at, row);
+			at += bs_texture_level_bytes(t, l);
+		}
+	}
+	free(staging);
+	arena_invalidate(&m->arena);
+
+	// Branco, para material sem textura.
+	if (NT_SUCCESS(xsdk_texture_create(&m->white, XSDK_FORMAT_A8R8G8B8, 4, 4, 1, true))) {
+		static const uint32_t white[16] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+			0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+			0xFFFFFFFF };
+		xsdk_texture_upload(&m->white, 0, white, 16);
+		xsdk_gpu_invalidate(m->white.address, m->white.size_bytes);
+		m->white_ok = true;
+	}
+	xsdk_log_write("botstrike: mapa na GPU, %u blocos, %.1f MB", (unsigned)m->arena.count,
+		m->arena.total_bytes / 1048576.0);
+	return true;
+}
+
+static bool load_shaders(Map *m)
+{
+	NTSTATUS s = xsdk_shader_load(&m->vertex, map_vert.container, map_vert.container_bytes);
+	m->vertex_ok = NT_SUCCESS(s);
+	if (NT_SUCCESS(s)) {
+		s = xsdk_shader_load(&m->pixel, map_frag.container, map_frag.container_bytes);
+		m->pixel_ok = NT_SUCCESS(s);
+	}
+	if (NT_SUCCESS(s)) {
+		s = xsdk_shader_load(&m->pixel_alpha, map_alpha_frag.container, map_alpha_frag.container_bytes);
+		m->pixel_alpha_ok = NT_SUCCESS(s);
+	}
+	if (NT_SUCCESS(s))
+		s = xsdk_shader_set_vertex_layout(
+			&m->vertex, layout, sizeof layout / sizeof layout[0], (const uint32_t[]){ BS_VERTEX_BYTES });
+	if (!NT_SUCCESS(s))
+		return map_error(m, "os shaders nao carregaram");
+	const XsdkDepthStencil depth = { .depth_test = true, .depth_write = true, .depth_compare = XSDK_COMPARE_LESS_EQUAL };
+	xsdk_gpu_depth_stencil_state(&m->depth, &depth);
+	const XsdkSampler sampler = { .mag_filter = XSDK_FILTER_LINEAR,
+		.min_filter = XSDK_FILTER_LINEAR,
+		.mip_filter = XSDK_FILTER_LINEAR,
+		.address_u = XSDK_ADDRESS_WRAP,
+		.address_v = XSDK_ADDRESS_WRAP };
+	xsdk_texture_sampler_state(&m->sampler, &sampler);
+	return true;
+}
+
+static void map_free(Map *m)
+{
+	if (m->white_ok)
+		xsdk_texture_free(&m->white);
+	arena_free(&m->arena);
+	if (m->pixel_alpha_ok)
+		xsdk_shader_free(&m->pixel_alpha);
+	if (m->pixel_ok)
+		xsdk_shader_free(&m->pixel);
+	if (m->vertex_ok)
+		xsdk_shader_free(&m->vertex);
+	free(m->textures);
+	free(m->draws);
+	bs_collider_free(&m->collider);
+	bs_pack_free(&m->pack);
+}
+
+// ---------------------------------------------------------------- desenho
+
+typedef struct {
+	float plane[6][4];
+} Frustum;
+
+static Frustum frustum_of(const Mat4 *vp)
+{
+	// linhas da matriz coluna a coluna; clip z de 0 a w
+	float r[4][4];
+	for (int i = 0; i < 4; i++)
+		for (int c = 0; c < 4; c++)
+			r[i][c] = vp->m[c * 4 + i];
+	Frustum f;
+	for (int c = 0; c < 4; c++) {
+		f.plane[0][c] = r[3][c] + r[0][c];
+		f.plane[1][c] = r[3][c] - r[0][c];
+		f.plane[2][c] = r[3][c] + r[1][c];
+		f.plane[3][c] = r[3][c] - r[1][c];
+		f.plane[4][c] = r[2][c];
+		f.plane[5][c] = r[3][c] - r[2][c];
+	}
+	return f;
+}
+
+static bool box_visible(const Frustum *f, Vec3 lo, Vec3 hi)
+{
+	for (int i = 0; i < 6; i++) {
+		const float *p = f->plane[i];
+		const float x = p[0] >= 0 ? hi.x : lo.x, y = p[1] >= 0 ? hi.y : lo.y, z = p[2] >= 0 ? hi.z : lo.z;
+		if (p[0] * x + p[1] * y + p[2] * z + p[3] < 0.0f)
+			return false;
+	}
+	return true;
+}
+
+static float box_distance(Vec3 p, Vec3 lo, Vec3 hi)
+{
+	const float dx = fmaxf(fmaxf(lo.x - p.x, 0.0f), p.x - hi.x);
+	const float dy = fmaxf(fmaxf(lo.y - p.y, 0.0f), p.y - hi.y);
+	const float dz = fmaxf(fmaxf(lo.z - p.z, 0.0f), p.z - hi.z);
+	return sqrtf(dx * dx + dy * dy + dz * dz);
+}
+
+typedef struct {
+	uint32_t draws, triangles;
+} DrawStats;
+
+static void set_pixel_constants(const Map *m, const BsMaterial *mat, bool alpha)
+{
+	const float c[8] = { mat->color[0], mat->color[1], mat->color[2], mat->color[3], m->pack.info.fog_rgb[0],
+		m->pack.info.fog_rgb[1], m->pack.info.fog_rgb[2], 1.0f };
+	xsdk_gpu_set_pixel_constants(alpha ? MAP_ALPHA_FRAG_PUSH : MAP_FRAG_PUSH, c, 2);
+}
+
+static DrawStats draw_map(const Map *m, const BsPlayer *pl, uint32_t width, uint32_t height)
+{
+	const BsInfo *info = &m->pack.info;
+	const Vec3 eye = bs_player_eye(pl);
+	const float far_z = info->fog_end + 30.0f;
+	const Mat4 proj = mat4_perspective(FOV_Y, (float)width / (float)height, NEAR_Z, far_z);
+	const Mat4 view = mat4_view(eye, pl->yaw, pl->pitch);
+	const Mat4 vp = mat4_multiply(&proj, &view);
+	const Frustum fr = frustum_of(&vp);
+	float vc[24];
+	memcpy(vc, vp.m, sizeof vp.m);
+	vc[16] = eye.x;
+	vc[17] = eye.y;
+	vc[18] = eye.z;
+	vc[19] = 1.0f;
+	vc[20] = info->fog_start;
+	vc[21] = 1.0f / (info->fog_end - info->fog_start);
+	vc[22] = vc[23] = 0.0f;
+
+	xsdk_gpu_set_target(width, height);
+	xsdk_gpu_set_depth_stencil(&m->depth);
+	xsdk_gpu_set_shaders(&m->vertex, &m->pixel);
+	xsdk_built_shader_set_literals(&map_vert);
+	xsdk_built_shader_set_literals(&map_frag);
+	xsdk_gpu_set_vertex_constants(MAP_VERT_PUSH, vc, MAP_VERT_PUSH_REGISTERS);
+
+	DrawStats st = { 0 };
+	bool alpha = false;
+	uint32_t bound_material = UINT32_MAX;
+	for (uint32_t i = 0; i < m->pack.draw_count; i++) {
+		const BsDraw *d = &m->pack.draws[i];
+		if (!box_visible(&fr, d->min, d->max))
+			continue;
+		const bool near = box_distance(eye, d->min, d->max) < LOD_DISTANCE;
+		if ((d->flags & BS_DRAW_NEAR && !near) || (d->flags & BS_DRAW_FAR && near))
+			continue;
+		const BsMaterial *mat = &m->pack.materials[d->material];
+		if (mat->texture < 0 && !m->white_ok)
+			continue;
+		const bool want_alpha = (d->flags & BS_DRAW_ALPHA_TEST) != 0;
+		if (want_alpha != alpha) {
+			// os draws vem com os opacos primeiro; troca de shader uma vez
+			alpha = want_alpha;
+			xsdk_gpu_set_shaders(&m->vertex, alpha ? &m->pixel_alpha : &m->pixel);
+			xsdk_built_shader_set_literals(&map_vert);
+			xsdk_built_shader_set_literals(alpha ? &map_alpha_frag : &map_frag);
+			xsdk_gpu_set_vertex_constants(MAP_VERT_PUSH, vc, MAP_VERT_PUSH_REGISTERS);
+			bound_material = UINT32_MAX;
+		}
+		if (d->material != bound_material) {
+			bound_material = d->material;
+			const XsdkTexture *tex = mat->texture >= 0 ? &m->textures[mat->texture] : &m->white;
+			xsdk_gpu_set_texture(alpha ? MAP_ALPHA_FRAG_SAMPLER_0_0 : MAP_FRAG_SAMPLER_0_0, tex, &m->sampler);
+			set_pixel_constants(m, mat, alpha);
+		}
+		const GpuDraw *g = &m->draws[i];
+		xsdk_gpu_set_vertices(0, g->vertex_address, g->vertex_bytes);
+		xsdk_gpu_draw_indexed(XSDK_PRIMITIVE_TRIANGLE_LIST, g->index_address, d->index_count, false);
+		st.draws++;
+		st.triangles += d->index_count / 3;
+	}
+	return st;
+}
+
+static uint32_t sky_argb(const BsInfo *info)
+{
+	const uint32_t r = (uint32_t)(clampf(info->sky_rgb[0], 0, 1) * 255.0f);
+	const uint32_t g = (uint32_t)(clampf(info->sky_rgb[1], 0, 1) * 255.0f);
+	const uint32_t b = (uint32_t)(clampf(info->sky_rgb[2], 0, 1) * 255.0f);
+	return 0xFF000000u | r << 16 | g << 8 | b;
+}
+
+// ---------------------------------------------------------------- controle
+
+static float stick(int16_t value)
+{
+	if (value > -STICK_DEAD_ZONE && value < STICK_DEAD_ZONE)
+		return 0.0f;
+	const float s = value > 0 ? (value - STICK_DEAD_ZONE) / (32767.0f - STICK_DEAD_ZONE)
+							  : (value + STICK_DEAD_ZONE) / (32768.0f - STICK_DEAD_ZONE);
+	return clampf(s, -1.0f, 1.0f);
+}
+
+static double seconds(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return ts.tv_sec + ts.tv_nsec * 1e-9;
+}
+
+// ---------------------------------------------------------------- telas
+
+// A tela de erro: o motivo e como sair. Nada do mapa e desenhado.
+static void error_screen(const char *text, uint32_t width, uint32_t height)
+{
+	for (;;) {
+		INPUT_STATE input = { 0 };
+		if (XamInputGetState(0, 0, &input) == ERROR_SUCCESS && input.gamepad.buttons & INPUT_GAMEPAD_BACK)
+			return;
+		uint32_t address;
+		if (!NT_SUCCESS(xsdk_present_begin(&address, BEGIN_TIMEOUT_MS)))
+			return;
+		xsdk_gpu_set_target(width, height);
+		char screen[512];
+		snprintf(screen, sizeof screen,
+			"Bot Strike 360 nao conseguiu abrir o Dust II.\n\n%s\n\n"
+			"O dust2.pak vai ao lado do .xex ou em Hdd1:\\BotStrike\\.\nGere de novo no PC com o tools/build_pack.\n\n"
+			"Back volta para a dashboard.",
+			text);
+		xsdk_text_draw(80, 120, 1, TEXT_ARGB, screen);
+		xsdk_gpu_resolve(address, width, height, 0xFF1A1A1E);
+		xsdk_present_end();
+	}
+}
+
+static void run(Map *m, uint32_t width, uint32_t height)
+{
+	BsPlayer pl;
+	uint32_t spawn = 0;
+	bs_player_spawn(&pl, &m->pack.spawns[spawn]);
+	uint16_t last_buttons = 0;
+	bool hud = true;
+	double last = seconds();
+	double fps_time = last;
+	uint32_t fps_frames = 0;
+	float fps = 0.0f, cpu_ms = 0.0f;
+	const uint32_t clear = sky_argb(&m->pack.info);
+	for (;;) {
+		INPUT_STATE input = { 0 };
+		const bool connected = XamInputGetState(0, 0, &input) == ERROR_SUCCESS;
+		const uint16_t buttons = connected ? input.gamepad.buttons : 0;
+		const uint16_t pressed = buttons & ~last_buttons;
+		last_buttons = buttons;
+		if (pressed & INPUT_GAMEPAD_BACK)
+			break;
+		if (pressed & INPUT_GAMEPAD_START)
+			hud = !hud;
+		if (pressed & INPUT_GAMEPAD_Y)
+			pl.fly = !pl.fly;
+		if (pressed & INPUT_GAMEPAD_X || pl.position.y < m->pack.info.min.y - 20.0f) {
+			if (pressed & INPUT_GAMEPAD_X)
+				spawn = (spawn + 1) % m->pack.spawn_count;
+			const bool fly = pl.fly;
+			bs_player_spawn(&pl, &m->pack.spawns[spawn]);
+			pl.fly = fly;
+		}
+
+		const double now = seconds();
+		const float dt = (float)(now - last);
+		last = now;
+		BsInput in = { 0 };
+		if (connected) {
+			in.move_x = stick(input.gamepad.thumb_lx);
+			in.move_y = stick(input.gamepad.thumb_ly);
+			const float rx = stick(input.gamepad.thumb_rx), ry = stick(input.gamepad.thumb_ry);
+			// curva: devagar perto do centro para mirar, rapido no fim para virar
+			in.look_x = rx * fabsf(rx) * LOOK_SPEED * dt;
+			in.look_y = ry * fabsf(ry) * LOOK_SPEED * 0.7f * dt;
+			in.jump = (pl.fly ? buttons : pressed) & INPUT_GAMEPAD_A;
+			in.crouch = buttons & INPUT_GAMEPAD_B;
+			in.walk = input.gamepad.left_trigger > TRIGGER_THRESHOLD;
+		}
+		const double cpu0 = seconds();
+		bs_player_update(&pl, &m->collider, &in, dt);
+
+		uint32_t address;
+		const NTSTATUS status = xsdk_present_begin(&address, BEGIN_TIMEOUT_MS);
+		if (!NT_SUCCESS(status)) {
+			xsdk_log_write("botstrike: xsdk_present_begin falhou: 0x%08X; saindo", (unsigned)status);
+			return;
+		}
+		const DrawStats st = draw_map(m, &pl, width, height);
+		cpu_ms = cpu_ms * 0.9f + (float)((seconds() - cpu0) * 1000.0) * 0.1f;
+		fps_frames++;
+		if (now - fps_time >= 1.0) {
+			fps = (float)(fps_frames / (now - fps_time));
+			fps_frames = 0;
+			fps_time = now;
+		}
+		if (hud) {
+			char line[512];
+			snprintf(line, sizeof line,
+				"BOT STRIKE 360 - Dust II   %2.0f fps   cpu %.1f ms   %u draws   %uk triangulos\n"
+				"pos %.1f %.1f %.1f   %s%s   spawn %u (%s)\n"
+				"LS andar  RS olhar  A pular  B agachar  LT devagar  X proximo spawn  Y voar  Start HUD  Back sair",
+				fps, cpu_ms, (unsigned)st.draws, (unsigned)(st.triangles / 1000), pl.position.x, pl.position.y,
+				pl.position.z, pl.fly ? "VOANDO" : (pl.on_ground ? "no chao" : "no ar"), connected ? "" : "   SEM CONTROLE",
+				(unsigned)spawn, m->pack.spawns[spawn].team ? "T" : "CT");
+			xsdk_text_draw(40, 30, 1, TEXT_ARGB, line);
+		}
+		xsdk_gpu_resolve(address, width, height, clear);
+		xsdk_present_end();
+	}
+}
+
+int main(void)
+{
+	xsdk_log_write("botstrike: etapa 1 (Dust II, andar)");
+	NTSTATUS status = xsdk_gpu_open();
+	if (!NT_SUCCESS(status)) {
+		xsdk_log_write("botstrike: xsdk_gpu_open falhou: 0x%08X", (unsigned)status);
+		return 1;
+	}
+	// O logo fica na tela durante todo o carregamento; o xsdk_present_open assume a tela e ele some no 1o quadro.
+	// Antes ficava so 1,5 s e a TV mostrava a memoria de video sem nada (a tela chuviscada).
+	const NTSTATUS splash = xsdk_splash_begin();
+	const bool splash_up = NT_SUCCESS(splash);
+	if (!splash_up)
+		xsdk_log_write("botstrike: xsdk_splash_begin falhou: 0x%08X", (unsigned)splash);
+	const bool text_ok = NT_SUCCESS(xsdk_text_open());
+
+	static Map map;
+	const double t0 = seconds();
+	bool ok = load_shaders(&map) && open_pack(&map);
+	if (ok && !bs_collider_init(&map.collider, &map.pack))
+		ok = map_error(&map, "sem memoria para a colisao");
+	if (ok)
+		ok = upload_map(&map);
+	if (ok)
+		xsdk_log_write("botstrike: carregado em %.1f s", seconds() - t0);
+
+	uint32_t width = 0, height = 0;
+	status = xsdk_present_open(XSDK_DISPLAY_720P, BUFFERS, SWAP_INTERVAL, &width, &height);
+	if (!NT_SUCCESS(status)) {
+		xsdk_log_write("botstrike: xsdk_present_open falhou: 0x%08X", (unsigned)status);
+		if (splash_up)
+			xsdk_splash_end();
+	} else {
+		if (ok)
+			run(&map, width, height);
+		else if (text_ok)
+			error_screen(map.error, width, height);
+		xsdk_present_close();
+	}
+	map_free(&map);
+	if (text_ok)
+		xsdk_text_close();
+	status = xsdk_gpu_close();
+	if (!NT_SUCCESS(status))
+		xsdk_log_write("botstrike: xsdk_gpu_close falhou: 0x%08X", (unsigned)status);
+	xsdk_log_write("botstrike: fim");
+	return 0;
+}

@@ -1,0 +1,606 @@
+{
+ "sheet": "assets",
+ "columns": [
+  "id",
+  "kind",
+  "vpk",
+  "path",
+  "out",
+  "anims"
+ ],
+ "note": "Every asset is read from the player's own CS2 install at first launch by the bundled Source2Viewer-CLI and cached; nothing from CS2 ships in the release. vpk: map = game/csgo/maps/<map>.vpk, pak = game/csgo/pak01_dir.vpk. out is relative to the cache folder. A path or out may list alternatives separated by |: CS2 updates rename files (Dust II's world_physics.vphys_c became world_physics.vmdl_c), the first real output wins. Only map, phys, ents, trig and model rows are required to start; a missing sound, icon or font is logged and the game runs without it. anim rows are CS2's AnimGraph2 clips (late-2026 builds keep agent animations outside the model); fighters remap them onto the agent skeleton by bone name. Older builds still carry anims inside the model. vm_<set>_<clip> rows are CS2's first-person clips on its viewmodel skeleton; the agent's firstperson arm meshes are re-skinned onto it by bone name and the gun hangs from its wpn bone.",
+ "rows": [
+  {
+   "id": "map_dust2",
+   "kind": "map",
+   "vpk": "map:de_dust2",
+   "path": "maps/de_dust2.vmap_c",
+   "out": "maps/de_dust2.glb",
+   "anims": ""
+  },
+  {
+   "id": "phys_dust2",
+   "kind": "phys",
+   "vpk": "map:de_dust2",
+   "path": "maps/de_dust2/world_physics.vphys_c|maps/de_dust2/world_physics.vmdl_c",
+   "out": "maps/de_dust2/world_physics_physics.glb|maps/de_dust2/world_physics.glb",
+   "anims": ""
+  },
+  {
+   "id": "ents_dust2",
+   "kind": "ents",
+   "vpk": "map:de_dust2",
+   "path": "maps/de_dust2/entities/default_ents.vents_c",
+   "out": "maps/de_dust2/entities/default_ents.vents",
+   "anims": ""
+  },
+  {
+   "id": "trig_dust2",
+   "kind": "trig",
+   "vpk": "map:de_dust2",
+   "path": "maps/de_dust2.vmap_c",
+   "out": "maps/de_dust2_physics.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_ct",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "agents/models/ctm_sas/ctm_sas.vmdl_c|characters/models/ctm_sas/ctm_sas.vmdl_c",
+   "out": "agents/models/ctm_sas/ctm_sas.glb|characters/models/ctm_sas/ctm_sas.glb",
+   "anims": "sh_rifl_stand_idle_twitch_01,sh_run_fast_2step_n,sh_rifl_stand_firing,sh_stand_anim_death_chest_a"
+  },
+  {
+   "id": "mdl_t",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "agents/models/tm_phoenix/tm_phoenix.vmdl_c|characters/models/tm_phoenix/tm_phoenix.vmdl_c",
+   "out": "agents/models/tm_phoenix/tm_phoenix.glb|characters/models/tm_phoenix/tm_phoenix.glb",
+   "anims": "sh_rifl_stand_idle_twitch_01,sh_run_fast_2step_n,sh_rifl_stand_firing,sh_stand_anim_death_chest_a"
+  },
+  {
+   "id": "anim_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/world/rifle/_default_rifle/idle_rifle.vnmclip_c",
+   "out": "animation/anims/world/rifle/_default_rifle/idle_rifle.glb",
+   "anims": ""
+  },
+  {
+   "id": "anim_run",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/world/rifle/_default_rifle/run_n_rifle.vnmclip_c",
+   "out": "animation/anims/world/rifle/_default_rifle/run_n_rifle.glb",
+   "anims": ""
+  },
+  {
+   "id": "anim_fire",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/world/rifle/_default_rifle/shoot_rifle.vnmclip+non_additive.vnmclip_c",
+   "out": "animation/anims/world/rifle/_default_rifle/shoot_rifle.vnmclip+non_additive.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_knife",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "weapons/models/knife/knife_default_ct/weapon_knife_default_ct.vmdl_c",
+   "out": "weapons/models/knife/knife_default_ct/weapon_knife_default_ct.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_glock",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "weapons/models/glock18/weapon_pist_glock18.vmdl_c",
+   "out": "weapons/models/glock18/weapon_pist_glock18.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_usp",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "weapons/models/usp_silencer/weapon_pist_usp_silencer.vmdl_c",
+   "out": "weapons/models/usp_silencer/weapon_pist_usp_silencer.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_ak47",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "weapons/models/ak47/weapon_rif_ak47.vmdl_c",
+   "out": "weapons/models/ak47/weapon_rif_ak47.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_m4a1s",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "weapons/models/m4a1_silencer/weapon_rif_m4a1_silencer.vmdl_c",
+   "out": "weapons/models/m4a1_silencer/weapon_rif_m4a1_silencer.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_awp",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "weapons/models/awp/weapon_snip_awp.vmdl_c",
+   "out": "weapons/models/awp/weapon_snip_awp.glb",
+   "anims": ""
+  },
+  {
+   "id": "mdl_c4",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "weapons/models/c4/weapon_c4.vmdl_c",
+   "out": "weapons/models/c4/weapon_c4.glb",
+   "anims": ""
+  },
+  {
+   "id": "img_knife",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/knife.vsvg_c",
+   "out": "panorama/images/icons/equipment/knife.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_glock",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/glock.vsvg_c",
+   "out": "panorama/images/icons/equipment/glock.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_usp",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/usp_silencer.vsvg_c",
+   "out": "panorama/images/icons/equipment/usp_silencer.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_ak47",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/ak47.vsvg_c",
+   "out": "panorama/images/icons/equipment/ak47.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_m4a1s",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/m4a1_silencer.vsvg_c",
+   "out": "panorama/images/icons/equipment/m4a1_silencer.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_awp",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/awp.vsvg_c",
+   "out": "panorama/images/icons/equipment/awp.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_c4",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/c4.vsvg_c",
+   "out": "panorama/images/icons/equipment/c4.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_armor",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/armor.vsvg_c",
+   "out": "panorama/images/icons/equipment/armor.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_armor_helmet",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/armor_helmet.vsvg_c",
+   "out": "panorama/images/icons/equipment/armor_helmet.svg",
+   "anims": ""
+  },
+  {
+   "id": "img_defuser",
+   "kind": "svg",
+   "vpk": "pak",
+   "path": "panorama/images/icons/equipment/defuser.vsvg_c",
+   "out": "panorama/images/icons/equipment/defuser.svg",
+   "anims": ""
+  },
+  {
+   "id": "snd_knife",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/knife/knife_slash1.vsnd_c",
+   "out": "sounds/weapons/knife/knife_slash1.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_glock",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/glock18/glock_01.vsnd_c",
+   "out": "sounds/weapons/glock18/glock_01.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_usp",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/usp/usp_01.vsnd_c",
+   "out": "sounds/weapons/usp/usp_01.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_ak47",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/ak47/ak47_01.vsnd_c",
+   "out": "sounds/weapons/ak47/ak47_01.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_m4a1s",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/m4a1/m4a1_silencer_01.vsnd_c",
+   "out": "sounds/weapons/m4a1/m4a1_silencer_01.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_awp",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/awp/awp_01.vsnd_c",
+   "out": "sounds/weapons/awp/awp_01.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_c4_beep",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/c4/c4_beep2.vsnd_c",
+   "out": "sounds/weapons/c4/c4_beep2.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_c4_explode",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/c4/c4_explode1.vsnd_c",
+   "out": "sounds/weapons/c4/c4_explode1.wav",
+   "anims": ""
+  },
+  {
+   "id": "snd_c4_disarm",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/weapons/c4/c4_disarmfinish.vsnd_c",
+   "out": "sounds/weapons/c4/c4_disarmfinish.wav",
+   "anims": ""
+  },
+  {
+   "id": "mus_menu",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/music/valve_cs2_01/mainmenu.vsnd_c",
+   "out": "sounds/music/valve_cs2_01/mainmenu.mp3",
+   "anims": ""
+  },
+  {
+   "id": "mus_start",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/music/valve_cs2_01/startround_01.vsnd_c",
+   "out": "sounds/music/valve_cs2_01/startround_01.mp3",
+   "anims": ""
+  },
+  {
+   "id": "mus_won",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/music/valve_cs2_01/wonround.vsnd_c",
+   "out": "sounds/music/valve_cs2_01/wonround.mp3",
+   "anims": ""
+  },
+  {
+   "id": "mus_lost",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/music/valve_cs2_01/lostround.vsnd_c",
+   "out": "sounds/music/valve_cs2_01/lostround.mp3",
+   "anims": ""
+  },
+  {
+   "id": "mus_planted",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/music/valve_cs2_01/bombplanted.vsnd_c",
+   "out": "sounds/music/valve_cs2_01/bombplanted.mp3",
+   "anims": ""
+  },
+  {
+   "id": "amb_wind",
+   "kind": "sound",
+   "vpk": "pak",
+   "path": "sounds/ambient/wind/csgo_dust_wind_lp_01.vsnd_c|sounds/ambient/common/wind/csgo_dust_wind_lp_01.vsnd_c",
+   "out": "sounds/ambient/common/wind/csgo_dust_wind_lp_01.wav|sounds/ambient/wind/csgo_dust_wind_lp_01.wav",
+   "anims": ""
+  },
+  {
+   "id": "font_ui",
+   "kind": "file",
+   "vpk": "loose",
+   "path": "panorama/fonts/notosans-bold.ttf",
+   "out": "",
+   "anims": ""
+  },
+  {
+   "id": "font_body",
+   "kind": "file",
+   "vpk": "loose",
+   "path": "panorama/fonts/notosans-regular.ttf",
+   "out": "",
+   "anims": ""
+  },
+  {
+   "id": "vm_pistol_draw",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/_default_pistol/draw_pistol.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/_default_pistol/draw_pistol.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_pistol_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/_default_pistol/idle_pistol.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/_default_pistol/idle_pistol.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_pistol_shoot",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/_default_pistol/shoot1_pistol.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/_default_pistol/shoot1_pistol.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_pistol_reload",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/_default_pistol/reload_pistol.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/_default_pistol/reload_pistol.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_rifle_draw",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/_default_rifle/draw_rifle.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/_default_rifle/draw_rifle.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_rifle_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/_default_rifle/idle_rifle.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/_default_rifle/idle_rifle.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_rifle_shoot",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/_default_rifle/shoot1_rifle.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/_default_rifle/shoot1_rifle.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_rifle_reload",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/_default_rifle/reload_rifle.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/_default_rifle/reload_rifle.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_knife_draw",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/knife/_default_knife/draw_knife.vnmclip_c",
+   "out": "animation/anims/viewmodel/knife/_default_knife/draw_knife.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_knife_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/knife/_default_knife/idle_knife.vnmclip_c",
+   "out": "animation/anims/viewmodel/knife/_default_knife/idle_knife.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_knife_shoot",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/knife/_default_knife/light_miss1_knife.vnmclip_c",
+   "out": "animation/anims/viewmodel/knife/_default_knife/light_miss1_knife.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_knife_reload",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/knife/_default_knife/lookat01_knife.vnmclip_c",
+   "out": "animation/anims/viewmodel/knife/_default_knife/lookat01_knife.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_c4_draw",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/equipment/c4/draw_c4.vnmclip_c",
+   "out": "animation/anims/viewmodel/equipment/c4/draw_c4.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_c4_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/equipment/c4/idle_c4.vnmclip_c",
+   "out": "animation/anims/viewmodel/equipment/c4/idle_c4.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_c4_shoot",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/equipment/c4/plant_c4.vnmclip_c",
+   "out": "animation/anims/viewmodel/equipment/c4/plant_c4.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_c4_reload",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/equipment/c4/lookat01_c4.vnmclip_c",
+   "out": "animation/anims/viewmodel/equipment/c4/lookat01_c4.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_ak_draw",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_ak/draw_ak.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_ak/draw_ak.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_ak_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_ak/idle_ak.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_ak/idle_ak.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_ak_shoot",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_ak/shoot1_ak.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_ak/shoot1_ak.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_ak_reload",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_ak/reload_ak.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_ak/reload_ak.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_glock_draw",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/pistol_glock18/draw_glock.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/pistol_glock18/draw_glock.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_glock_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/pistol_glock18/idle_glock.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/pistol_glock18/idle_glock.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_glock_shoot",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/pistol_glock18/shoot1_glock.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/pistol_glock18/shoot1_glock.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_glock_reload",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/pistol/pistol_glock18/reload_glock.vnmclip_c",
+   "out": "animation/anims/viewmodel/pistol/pistol_glock18/reload_glock.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_awp_draw",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_awp/draw_awp.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_awp/draw_awp.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_awp_idle",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_awp/idle_awp.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_awp/idle_awp.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_awp_shoot",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_awp/shoot1_awp.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_awp/shoot1_awp.glb",
+   "anims": ""
+  },
+  {
+   "id": "vm_awp_reload",
+   "kind": "anim",
+   "vpk": "pak",
+   "path": "animation/anims/viewmodel/rifle/rifle_awp/reload_awp.vnmclip_c",
+   "out": "animation/anims/viewmodel/rifle/rifle_awp/reload_awp.glb",
+   "anims": ""
+  },
+  {
+   "id": "shell_9mm",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "models/models/weapons/shared/shell_9mm_hr.vmdl_c",
+   "out": "models/models/weapons/shared/shell_9mm_hr.glb",
+   "anims": ""
+  },
+  {
+   "id": "shell_762",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "models/models/weapons/shared/shell_762_hr.vmdl_c",
+   "out": "models/models/weapons/shared/shell_762_hr.glb",
+   "anims": ""
+  },
+  {
+   "id": "shell_50cal",
+   "kind": "model",
+   "vpk": "pak",
+   "path": "models/models/weapons/shared/shell_50cal_hr.vmdl_c",
+   "out": "models/models/weapons/shared/shell_50cal_hr.glb",
+   "anims": ""
+  }
+ ]
+}
